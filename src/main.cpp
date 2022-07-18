@@ -2,9 +2,11 @@
 #include "graphs/graph.h"
 #include <iostream>
 #include <armadillo>
-#include <algorithm>
 #include <execution>
+#include <algorithm>
+#include "../extern/progressbar.h"
 
+/*
 void plot_graph(const std::vector<std::pair<size_t, size_t>>& edges, const std::vector<double>& weights, const std::vector<std::vector<int>>& clusters) {
 
     auto graph = matplot::graph(edges);
@@ -51,6 +53,7 @@ void plot_graph(const std::vector<std::pair<size_t, size_t>>& edges, const std::
     graph -> y_data(y);
     matplot::show();
 }
+ */
 
 int main() {
 
@@ -70,8 +73,8 @@ int main() {
 
     auto S = grid.successor_representation(0.80);
 
-    std::vector<int> n_clusters = {10, 30, 40};
-    int n_nodes = 100000;
+    std::vector<int> n_clusters = {10};
+    int n_nodes = 1000000;
 
     for (auto n_c : n_clusters) {
         // Setup random clusters
@@ -80,53 +83,33 @@ int main() {
             cluster_idxs.push_back(arma::conv_to<std::vector<int>>::from(arma::randi<arma::uvec>(1, arma::distr_param(0, (int) grid.nodes() - 1))));
         };
 
+        progressbar bar((int) n_nodes);
+
         for (int i = 0; i < n_nodes; ++i) {
             // Randomly pick a random node
             int node = arma::randi<int>(arma::distr_param(0,(int) grid.nodes() - 1));
             int max_cluster = 0;
             for (int j = 0; j < cluster_idxs.size(); ++j) {
 
-                auto this_cluster_successor = std::transform_reduce(cluster_idxs[j].begin(), cluster_idxs[j].end(), 0.,
-                                                 [](const auto& x, const auto& y) {return x + y;},
-                                                 [S, node](const auto& x) {return S(x, node);}) / (double) cluster_idxs[j].size();
+                auto sum_func = [](const auto &x, const auto &y) -> double {return x + y;};
+                auto connectivity_func = [S = std::cref(S), node = std::cref(node)](const auto &x) -> double {return S(x, node);};
 
-                auto max_cluster_successor = std::transform_reduce(cluster_idxs[max_cluster].begin(), cluster_idxs[max_cluster].end(), 0.,
-                                                                    [](const auto& x, const auto& y) {return x + y;},
-                                                                    [S, node](const auto& x) {return S(x, node);}) / (double) cluster_idxs[max_cluster].size();
+                auto this_cluster_successor = std::transform_reduce(std::execution::par_unseq,cluster_idxs[max_cluster].begin(), cluster_idxs[max_cluster].end(), 0.,
+                                                                    sum_func, connectivity_func) / (double) cluster_idxs[max_cluster].size();
+
+                auto max_cluster_successor = std::transform_reduce(std::execution::par_unseq,cluster_idxs[max_cluster].begin(), cluster_idxs[max_cluster].end(), 0.,
+                                                                    sum_func, connectivity_func) / (double) cluster_idxs[max_cluster].size();
 
                 if (this_cluster_successor > max_cluster_successor) max_cluster = j;
                 else if (this_cluster_successor < max_cluster_successor) max_cluster = (arma::randi<int>() % 2) ? j : max_cluster;
-
-/*                for (auto cluster_node : cluster_idxs[j]) {
-
-                    double max_cluster_distance = 0;
-                    for (auto index : cluster_idxs[max_cluster]) {
-                        max_cluster_distance = (S(index, node) > max_cluster_distance) ? S(index, node) : max_cluster_distance;
-                    }
-
-                    auto cluster_node_distance = S(cluster_node, node);
-
-                    if (cluster_node == node) {
-                        // Node is already in the cluster. We should test if it would be placed in the same cluster again.
-                        continue;
-                    }
-                    else if (cluster_node_distance > max_cluster_distance) {
-                        // We found a cluster node that is closer than the current cluster, let's update max_cluster
-                        max_cluster = j;
-                        break;
-                    } else if (cluster_node_distance == max_cluster_distance) {
-                        // If the two are equal, the node is added to a cluster at random.
-                        max_cluster = (arma::randi<int>() % 2) ? j : max_cluster;
-                    }
-                }*/
             }
             cluster_idxs[max_cluster].push_back(node);
+            bar.update();
         }
-        plot_graph(grid.edges(), grid.weights(), cluster_idxs);
+        //plot_graph(grid.edges(), grid.weights(), cluster_idxs);
     }
 
     //plot_graph(graph.edges(), graph.weights());
-
 
     return 0;
 }
