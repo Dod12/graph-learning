@@ -17,7 +17,7 @@ add_executable(graph_learning src/main.cpp src/graphs/graph.cpp src/graphs/graph
 if (CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     target_compile_options(graph_learning PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_COMPILE_OPTIONS>)
     target_include_directories(graph_learning PUBLIC $<TARGET_PROPERTY:MKL::MKL,INTERFACE_INCLUDE_DIRECTORIES>)
-    target_link_libraries(graph_learning $<LINK_ONLY:MKL::MKL>)
+    target_link_libraries(graph_learning PUBLIC $<LINK_ONLY:MKL::MKL>)
 endif()
 
-target_link_libraries(graph_learning ${ARMADILLO_LIBRARIES} Matplot++::matplot)
+target_link_libraries(graph_learning PUBLIC ${ARMADILLO_LIBRARIES} Matplot++::matplot)

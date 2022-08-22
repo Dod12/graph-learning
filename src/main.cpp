@@ -6,7 +6,6 @@
 #include <algorithm>
 #include "../extern/progressbar.h"
 
-/*
 void plot_graph(const std::vector<std::pair<size_t, size_t>>& edges, const std::vector<double>& weights, const std::vector<std::vector<int>>& clusters) {
 
     auto graph = matplot::graph(edges);
@@ -53,7 +52,6 @@ void plot_graph(const std::vector<std::pair<size_t, size_t>>& edges, const std::
     graph -> y_data(y);
     matplot::show();
 }
- */
 
 int main() {
 
@@ -92,21 +90,21 @@ int main() {
             for (int j = 0; j < cluster_idxs.size(); ++j) {
 
                 auto sum_func = [](const auto &x, const auto &y) -> double {return x + y;};
-                auto connectivity_func = [S = std::cref(S), node = std::cref(node)](const auto &x) -> double {return S(x, node);};
+                auto connectivity_func = [S = std::cref(S), node = std::cref(node)](const auto &x) -> double {return S(x, node);}; //TODO: Check the SR for node directionality
 
-                auto this_cluster_successor = std::transform_reduce(std::execution::par_unseq,cluster_idxs[max_cluster].begin(), cluster_idxs[max_cluster].end(), 0.,
-                                                                    sum_func, connectivity_func) / (double) cluster_idxs[max_cluster].size();
+                auto this_cluster_successor = std::transform_reduce(std::execution::par_unseq,cluster_idxs[j].begin(), cluster_idxs[j].end(), 0.,
+                                                                    sum_func, connectivity_func) / (double) cluster_idxs[j].size();
 
                 auto max_cluster_successor = std::transform_reduce(std::execution::par_unseq,cluster_idxs[max_cluster].begin(), cluster_idxs[max_cluster].end(), 0.,
                                                                     sum_func, connectivity_func) / (double) cluster_idxs[max_cluster].size();
 
                 if (this_cluster_successor > max_cluster_successor) max_cluster = j;
-                else if (this_cluster_successor < max_cluster_successor) max_cluster = (arma::randi<int>() % 2) ? j : max_cluster;
+                else if (this_cluster_successor == max_cluster_successor) max_cluster = (arma::randi<int>() % 2) ? j : max_cluster;
             }
             cluster_idxs[max_cluster].push_back(node);
             bar.update();
         }
-        //plot_graph(grid.edges(), grid.weights(), cluster_idxs);
+        plot_graph(grid.edges(), grid.weights(), cluster_idxs);
     }
 
     //plot_graph(graph.edges(), graph.weights());
